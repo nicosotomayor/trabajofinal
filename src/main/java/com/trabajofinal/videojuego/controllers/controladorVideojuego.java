@@ -101,7 +101,57 @@ public class controladorVideojuego {
             @Valid @ModelAttribute("videojuego") Videojuego videojuego,
             BindingResult result,
             Model model,@PathVariable("id")long id
-    ) git
+    ) {
+        
+        try {
+            model.addAttribute("categorias",this.svcCategoria.findAll());
+            model.addAttribute("estudios",this.svcEstudio.findAll());
+            if(result.hasErrors()){
+                return "views/formulario/videojuego";
+            }
+            String ruta = "C://Videojuegos/imagenes";
+            int index = archivo.getOriginalFilename().indexOf(".");
+            String extension = "";
+            extension = "."+archivo.getOriginalFilename().substring(index+1);
+            String nombreFoto = Calendar.getInstance().getTimeInMillis()+extension;
+            Path rutaAbsoluta = id != 0 ? Paths.get(ruta + "//"+videojuego.getImagen()) :
+                    Paths.get(ruta+"//"+nombreFoto);
+            if(id==0){
+                if(archivo.isEmpty()){
+                    model.addAttribute("errorImagenMsg","La imagen es requerida");
+                    return "views/formulario/videojuego";
+                }
+                if(!this.validarExtension(archivo)){
+                    model.addAttribute("errorImagenMsg","La extension no es valida");
+                    return "views/formulario/videojuego";
+                }
+                if(archivo.getSize() >= 15000000){
+                    model.addAttribute("errorImagenMsg","El peso excede 15MB");
+                    return "views/formulario/videojuego";
+                }
+                Files.write(rutaAbsoluta,archivo.getBytes());
+                videojuego.setImagen(nombreFoto);
+                this.svcVideojuego.saveOne(videojuego);
+            }else{
+                if(!archivo.isEmpty()){
+                    if(!this.validarExtension(archivo)){
+                        model.addAttribute("errorImagenMsg","La extension no es valida");
+                        return "views/formulario/videojuego";
+                    }
+                    if(archivo.getSize() >= 15000000){
+                        model.addAttribute("errorImagenMsg","El peso excede 15MB");
+                        return "views/formulario/videojuego";
+                    }
+                    Files.write(rutaAbsoluta,archivo.getBytes());
+                }
+                this.svcVideojuego.updateOne(videojuego,id);
+            }
+            return "redirect:/crud";
+        }catch(Exception e){
+            model.addAttribute("error", e.getMessage());
+            return "error";
+        }
+    }
 
     @GetMapping("/eliminar/videojuego/{id}")
     public String eliminarVideojuego(Model model,@PathVariable("id")long id){
